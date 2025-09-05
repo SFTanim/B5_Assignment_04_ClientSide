@@ -12,9 +12,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { DialogDescription } from "@radix-ui/react-dialog";
 import type { Genre, IBook, ICreateBook } from "@/interfaces";
 import BookState from "@/components/pageComponents/BookState";
+import { toast } from "react-toastify";
 
 const AddBook = () => {
   window.scrollTo(0, 0);
+
   const {
     data: booksData,
     isLoading: booksLoading,
@@ -26,7 +28,6 @@ const AddBook = () => {
     refetchOnReconnect: true,
   });
 
-  // Mutation for adding a book
   const [
     addBook,
     { data: newAddedBook, isLoading: addingBook, isError: addBookError },
@@ -53,9 +54,33 @@ const AddBook = () => {
   useEffect(() => {
     if (newAddedBook) {
       setBookList((prevBooks) => [...prevBooks, newAddedBook]);
-      setShowAddDialog(false); // close dialog after adding
+      setShowAddDialog(false);
+
+      toast.success("Book added successfully 📚", {
+        position: "top-center",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: false,
+        pauseOnHover: true,
+        draggable: true,
+        theme: "dark",
+      });
     }
   }, [newAddedBook]);
+
+  useEffect(() => {
+    if (addBookError) {
+      toast.error("Failed to add book. Please try again.", {
+        position: "top-center",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: false,
+        pauseOnHover: true,
+        draggable: true,
+        theme: "dark",
+      });
+    }
+  }, [addBookError]);
 
   if (booksLoading) return <p>Loading books...</p>;
   if (booksError) return <p>Error loading books.</p>;
@@ -75,13 +100,26 @@ const AddBook = () => {
   const handleSubmitAdd = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!formData.title || !formData.author || !formData.isbn) {
+      toast.warning("Please fill in all required fields!", {
+        position: "top-center",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: false,
+        pauseOnHover: true,
+        draggable: true,
+        theme: "dark",
+      });
+      return;
+    }
+
     const newBook: ICreateBook = {
       ...formData,
       available: formData.copies > 0 ? true : false,
     };
 
     try {
-      await addBook(newBook);
+      await addBook(newBook).unwrap();
     } catch (err) {
       console.error("Failed to add book:", err);
     }
@@ -102,12 +140,10 @@ const AddBook = () => {
 
       {/* Table */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-800">Library Books</h2>
         </div>
 
-        {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
@@ -245,11 +281,6 @@ const AddBook = () => {
                 Cancel
               </Button>
             </div>
-            {addBookError && (
-              <p className="text-red-500 text-sm">
-                Failed to add book. Please try again.
-              </p>
-            )}
           </form>
         </DialogContent>
       </Dialog>

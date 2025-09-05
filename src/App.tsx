@@ -1,12 +1,25 @@
 import { Outlet } from "react-router-dom";
 import Footer from "./components/pageComponents/Footer";
 import Navber from "./components/pageComponents/Navber";
+import { ToastContainer } from 'react-toastify';
+import "react-toastify/dist/ReactToastify.css";
 
 function App() {
-
   return (
-    <div className='container mx-auto bg-white shadow-sm border-b border-gray-200 rounded-t-3xl mt-3 px-4 sm:px-6 lg:px-8 pt-3 min-h-screen'>
+    <div className="container mx-auto bg-white shadow-sm border-b border-gray-200 rounded-t-3xl mt-3 px-4 sm:px-6 lg:px-8 pt-3 min-h-screen">
       <Navber />
+      <ToastContainer
+        position="top-center"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick={false}
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="dark"
+      />
       <div className="min-h-full">
         <Outlet />
       </div>

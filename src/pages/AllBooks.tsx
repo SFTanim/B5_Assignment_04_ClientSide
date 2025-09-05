@@ -2,22 +2,26 @@ import BookState from "@/components/pageComponents/BookState";
 import type { IBook } from "@/interfaces";
 import {
   useCreateBorrowMutation,
+  useDeleteBookMutation,
   useGetBooksQuery,
   useUpdateBookMutation,
 } from "@/redux/api/baseApi";
 import { useState } from "react";
+import { toast } from "react-toastify";
 
 const AllBooks = () => {
   window.scrollTo(0, 0);
   const [selectedBook, setSelectedBook] = useState<IBook | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [borrowMode, setBorrowMode] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<IBook | null>(null);
   const [borrowData, setBorrowData] = useState({ quantity: 1, dueDate: "" });
 
   const { data: books, isLoading, isError } = useGetBooksQuery(undefined);
   const [updateBook, { isLoading: updating }] = useUpdateBookMutation();
   const [createBorrow, { isLoading: borrowLoading }] =
     useCreateBorrowMutation();
+  const [deleteBook, { isLoading: deleteLoading }] = useDeleteBookMutation();
 
   if (isLoading) return <p>Loading books...</p>;
   if (isError) return <p>Error loading books.</p>;
@@ -38,11 +42,24 @@ const AllBooks = () => {
     setBorrowData({ quantity: 1, dueDate: "" });
   };
 
-  const handleDelete = (book: IBook) => {
-    console.log("Delete book:", book.title);
-    // Delete functionality would go here
+  // Delete with custom modal
+  const confirmDelete = (book: IBook) => {
+    setDeleteConfirm(book);
   };
 
+  const handleDelete = async () => {
+    if (!deleteConfirm) return;
+    try {
+      await deleteBook(deleteConfirm._id).unwrap();
+      toast.success(`"${deleteConfirm.title}" has been deleted successfully.`);
+      setDeleteConfirm(null);
+    } catch (error) {
+      console.error("Failed to delete book:", error);
+      toast.error("Failed to delete book. Please try again.");
+    }
+  };
+
+  // ✅ Update
   const handleUpdateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedBook) return;
@@ -62,18 +79,19 @@ const AllBooks = () => {
 
       setEditMode(false);
       setSelectedBook(null);
+      toast.success("Book updated successfully!");
     } catch (err) {
       console.error("Failed to update book:", err);
+      toast.error("Failed to update book. Please try again.");
     }
   };
 
-  // Borrow
   const handleBorrowSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedBook) return;
 
     if (borrowData.quantity > selectedBook.copies) {
-      alert("Quantity cannot exceed available copies.");
+      toast.warning("Quantity cannot exceed available copies.");
       return;
     }
 
@@ -84,8 +102,10 @@ const AllBooks = () => {
       }).unwrap();
       setBorrowMode(false);
       setSelectedBook(null);
+      toast.success(`Successfully borrowed "${selectedBook.title}"!`);
     } catch (err) {
       console.error("Failed to borrow book:", err);
+      toast.error("Failed to borrow book. Please try again.");
     }
   };
 
@@ -197,10 +217,15 @@ const AllBooks = () => {
                           </button>
                         )}
                         <button
-                          onClick={() => handleDelete(book)}
-                          className="text-red-600 hover:text-red-900"
+                          onClick={() => confirmDelete(book)}
+                          disabled={deleteLoading}
+                          className={`${
+                            deleteLoading
+                              ? "text-gray-400 cursor-not-allowed"
+                              : "text-red-600 hover:text-red-900"
+                          }`}
                         >
-                          Delete
+                          {deleteLoading ? "Deleting..." : "Delete"}
                         </button>
                       </td>
                     </tr>
@@ -209,6 +234,39 @@ const AllBooks = () => {
               </table>
             </div>
           </div>
+
+          {/* ✅ Delete Confirmation Modal */}
+          {deleteConfirm && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-lg max-w-md w-full p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Confirm Delete
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  Are you sure you want to delete{" "}
+                  <span className="font-semibold">
+                    "{deleteConfirm.title}"
+                  </span>
+                  ? This action cannot be undone.
+                </p>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setDeleteConfirm(null)}
+                    className="px-4 py-2 bg-gray-200 rounded"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleteLoading}
+                    className="px-4 py-2 bg-red-600 text-white rounded"
+                  >
+                    {deleteLoading ? "Deleting..." : "Delete"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Borrow Modal */}
           {borrowMode && selectedBook && (
@@ -362,7 +420,7 @@ const AllBooks = () => {
                     onChange={(e) =>
                       setSelectedBook({
                         ...selectedBook,
-                        genre: e.target.value as IBook["genre"], // cast to Genre type
+                        genre: e.target.value as IBook["genre"],
                       })
                     }
                     className="w-full border p-2 rounded"

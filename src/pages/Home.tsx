@@ -5,6 +5,8 @@ import { Link } from "react-router-dom";
 
 const Home = () => {
   window.scrollTo(0, 0);
+
+  // Get all books
   const {
     data: booksData,
     isLoading: booksLoading,
@@ -16,7 +18,6 @@ const Home = () => {
   const { data: borrowData } = useGetBorrowQuery(undefined);
   const borrowSummary: IBorrowSummary[] = borrowData?.data || [];
 
-  // Stats
   const totalBooks = allBooks.length;
   const availableBooks = allBooks.filter((b) => b.copies > 0).length;
   const totalCopies = allBooks.reduce((sum, b) => sum + b.copies, 0);
@@ -46,6 +47,7 @@ const Home = () => {
           operations.
         </p>
       </div>
+
       {/* Stats Section */}
       <section>
         <h2 className="text-2xl font-bold text-gray-800 mb-4">
@@ -104,6 +106,7 @@ const Home = () => {
           </div>
         </div>
       </section>
+      
       {/* Action Section */}
       <section>
         <h2 className="text-2xl font-bold text-gray-800 mb-4">
@@ -146,8 +149,6 @@ const Home = () => {
               View Borrowed
             </Link>
           </div>
-
-         
         </div>
       </section>
 
