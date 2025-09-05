@@ -36,3 +36,7 @@ export interface IBorrowSummary {
     isbn: string;
   };
 }
+
+export interface BookStateProps {
+  books: IBook[];
+}

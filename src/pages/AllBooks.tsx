@@ -1,251 +1,437 @@
-import { useEffect, useState } from "react";
-import { useCreateBookMutation, useGetBooksQuery } from "@/redux/api/baseApi";
-import { Button } from "@/components/ui/button";
+import BookState from "@/components/pageComponents/BookState";
+import type { IBook } from "@/interfaces";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { DialogDescription } from "@radix-ui/react-dialog";
-import type { Genre, IBook, ICreateBook } from "@/interfaces";
-
+  useCreateBorrowMutation,
+  useGetBooksQuery,
+  useUpdateBookMutation,
+} from "@/redux/api/baseApi";
+import { useState } from "react";
 
 const AllBooks = () => {
-  // Fetch books
-  const {
-    data: booksData,
-    isLoading: booksLoading,
-    isError: booksError,
-  } = useGetBooksQuery(undefined, {
-    pollingInterval: 30000,
-    refetchOnFocus: true,
-    refetchOnMountOrArgChange: true,
-    refetchOnReconnect: true,
-  });
+  const [selectedBook, setSelectedBook] = useState<IBook | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [borrowMode, setBorrowMode] = useState(false);
+  const [borrowData, setBorrowData] = useState({ quantity: 1, dueDate: "" });
 
-  // Mutation for adding a book
-  const [
-    addBook,
-    { data: newAddedBook, isLoading: addingBook, isError: addBookError },
-  ] = useCreateBookMutation();
+  const { data: books, isLoading, isError } = useGetBooksQuery(undefined);
+  const [updateBook, { isLoading: updating }] = useUpdateBookMutation();
+  const [createBorrow, { isLoading: borrowLoading }] =
+    useCreateBorrowMutation();
 
-  const [bookList, setBookList] = useState<IBook[]>([]);
-  const [showAddDialog, setShowAddDialog] = useState(false);
+  if (isLoading) return <p>Loading books...</p>;
+  if (isError) return <p>Error loading books.</p>;
+  const allBooks: IBook[] = books.data;
 
-  const [formData, setFormData] = useState<Omit<ICreateBook, "available">>({
-    title: "",
-    author: "",
-    genre: "FICTION",
-    isbn: "",
-    description: "",
-    copies: 1,
-  });
-
-  useEffect(() => {
-    if (booksData?.data) {
-      setBookList(booksData.data);
-    }
-  }, [booksData]);
-
-  useEffect(() => {
-    if (newAddedBook) {
-      setBookList((prevBooks) => [...prevBooks, newAddedBook]);
-      setShowAddDialog(false); // close dialog after adding
-    }
-  }, [newAddedBook]);
-
-  if (booksLoading) return <p>Loading books...</p>;
-  if (booksError) return <p>Error loading books.</p>;
-
-  const handleAddBook = () => {
-    setFormData({
-      title: "",
-      author: "",
-      genre: "FICTION",
-      isbn: "",
-      description: "",
-      copies: 1,
-    });
-    setShowAddDialog(true);
+  const handleView = (book: IBook) => {
+    setSelectedBook(book);
   };
 
-  const handleSubmitAdd = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleEdit = (book: IBook) => {
+    setSelectedBook(book);
+    setEditMode(true);
+  };
 
-    const newBook: ICreateBook = {
-      ...formData,
-      available: formData.copies > 0 ? true : false,
-    };
+  const handleBorrow = (book: IBook) => {
+    setSelectedBook(book);
+    setBorrowMode(true);
+    setBorrowData({ quantity: 1, dueDate: "" });
+  };
+
+  const handleDelete = (book: IBook) => {
+    console.log("Delete book:", book.title);
+    // Delete functionality would go here
+  };
+
+  const handleUpdateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedBook) return;
 
     try {
-      await addBook(newBook);
+      await updateBook({
+        id: selectedBook._id,
+        updates: {
+          title: selectedBook.title,
+          author: selectedBook.author,
+          copies: selectedBook.copies,
+          genre: selectedBook.genre,
+          isbn: selectedBook.isbn,
+          description: selectedBook.description,
+        },
+      }).unwrap();
+
+      setEditMode(false);
+      setSelectedBook(null);
     } catch (err) {
-      console.error("Failed to add book:", err);
+      console.error("Failed to update book:", err);
     }
   };
 
-  const closeAddDialog = () => setShowAddDialog(false);
+  // Borrow
+  const handleBorrowSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedBook) return;
+
+    if (borrowData.quantity > selectedBook.copies) {
+      alert("Quantity cannot exceed available copies.");
+      return;
+    }
+
+    try {
+      await createBorrow({
+        book: selectedBook._id,
+        ...borrowData,
+      }).unwrap();
+      setBorrowMode(false);
+      setSelectedBook(null);
+    } catch (err) {
+      console.error("Failed to borrow book:", err);
+    }
+  };
 
   return (
-    <div className="w-full p-4 md:p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-2xl font-bold text-gray-900">Book Management</h1>
-        <Button onClick={handleAddBook}>Add Book</Button>
-      </div>
+    <div>
+      <div className="min-h-screen ">
+        {/* Main Content */}
+        <main className="px-4 py-8 space-y-6">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <h1 className="text-2xl font-bold text-gray-900">
+              Book Management
+            </h1> 
+          </div>
 
-      {/* Statistics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Total Books</CardTitle>
-          </CardHeader>
-          <CardContent className="text-3xl font-bold text-emerald-600">
-            {bookList.length}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Available</CardTitle>
-          </CardHeader>
-          <CardContent className="text-3xl font-bold text-blue-600">
-            {bookList.filter((b) => b.available).length}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Total Copies</CardTitle>
-          </CardHeader>
-          <CardContent className="text-3xl font-bold text-purple-600">
-            {bookList.reduce((sum, b) => sum + b.copies, 0)}
-          </CardContent>
-        </Card>
-      </div>
+          {/* Book Stats */}
+          <BookState books={allBooks}></BookState>
 
-      {/* Table */}
-      <div className="bg-white rounded-lg shadow-md overflow-x-auto">
-        <table className="min-w-full table-auto">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-2 text-left">Serial</th>
-              <th className="px-4 py-2 text-left">Title</th>
-              <th className="px-4 py-2 text-left">Author</th>
-              <th className="px-4 py-2 text-left">Genre</th>
-              <th className="px-4 py-2 text-left">ISBN</th>
-              <th className="px-4 py-2 text-left">Copies</th>
-              <th className="px-4 py-2 text-left">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {bookList?.map((book, idx) => (
-              <tr key={book._id} className="hover:bg-gray-50">
-                <td className="px-4 py-2">{idx + 1}</td>
-                <td className="px-4 py-2">{book.title}</td>
-                <td className="px-4 py-2">{book.author}</td>
-                <td className="px-4 py-2">{book.genre}</td>
-                <td className="px-4 py-2">{book.isbn}</td>
-                <td className="px-4 py-2">{book.copies}</td>
-                <td className="px-4 py-2">
-                  {book.available ? (
-                    <span className="text-green-600 font-medium">
-                      Available
-                    </span>
-                  ) : (
-                    <span className="text-red-600 font-medium">
-                      Unavailable
-                    </span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Add Book Dialog */}
-      <Dialog open={showAddDialog} onOpenChange={closeAddDialog}>
-        <DialogContent className="w-full max-w-md sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Add Book</DialogTitle>
-            <DialogDescription>
-              Fill in the details below to add a new book to the library.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmitAdd} className="space-y-3">
-            <Input
-              placeholder="Title"
-              value={formData.title}
-              onChange={(e) =>
-                setFormData({ ...formData, title: e.target.value })
-              }
-            />
-            <Input
-              placeholder="Author"
-              value={formData.author}
-              onChange={(e) =>
-                setFormData({ ...formData, author: e.target.value })
-              }
-            />
-            <select
-              value={formData.genre}
-              onChange={(e) =>
-                setFormData({ ...formData, genre: e.target.value as Genre })
-              }
-              className="w-full border rounded-md p-2"
-            >
-              <option value="FICTION">FICTION</option>
-              <option value="NON_FICTION">NON_FICTION</option>
-              <option value="SCIENCE">SCIENCE</option>
-              <option value="HISTORY">HISTORY</option>
-              <option value="BIOGRAPHY">BIOGRAPHY</option>
-              <option value="FANTASY">FANTASY</option>
-            </select>
-            <Input
-              placeholder="ISBN"
-              value={formData.isbn}
-              onChange={(e) =>
-                setFormData({ ...formData, isbn: e.target.value })
-              }
-            />
-            <Input
-              type="number"
-              placeholder="Copies"
-              value={formData.copies}
-              onChange={(e) =>
-                setFormData({ ...formData, copies: +e.target.value })
-              }
-            />
-            <Textarea
-              placeholder="Description"
-              value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
-            />
-            <div className="flex flex-wrap gap-2">
-              <Button type="submit" disabled={addingBook}>
-                {addingBook ? "Saving..." : "Save"}
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={closeAddDialog}
-              >
-                Cancel
-              </Button>
+          {/* Book Table */}
+          <div className="bg-white rounded-lg shadow-md overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-800">
+                Library Books
+              </h2>
             </div>
-            {addBookError && (
-              <p className="text-red-500 text-sm">
-                Failed to add book. Please try again.
-              </p>
-            )}
-          </form>
-        </DialogContent>
-      </Dialog>
+
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      #
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Book Details
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Genre
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      ISBN
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Copies
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {allBooks.map((book,idx) => (
+                    <tr key={book._id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 text-sm text-gray-900">{idx + 1}</td>
+                      <td className="px-6 py-4">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {book.title}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            by {book.author}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {book.genre}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {book.isbn}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {book.copies}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            book.copies > 0
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {book.copies > 0 ? "Available" : "Unavailable"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm font-medium space-x-2">
+                        <button
+                          onClick={() => handleView(book)}
+                          className="text-emerald-600 hover:text-emerald-900"
+                        >
+                          View
+                        </button>
+                        <button
+                          onClick={() => handleEdit(book)}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
+                          Edit
+                        </button>
+                        {book.copies > 0 && (
+                          <button
+                            onClick={() => handleBorrow(book)}
+                            className="text-purple-600 hover:text-purple-900"
+                          >
+                            Borrow
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDelete(book)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Borrow Modal */}
+          {borrowMode && selectedBook && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-lg max-w-md w-full p-6">
+                <h3 className="text-lg font-semibold mb-4">
+                  Borrow "{selectedBook.title}"
+                </h3>
+                <form onSubmit={handleBorrowSubmit} className="space-y-3">
+                  <input
+                    type="number"
+                    min={1}
+                    max={selectedBook.copies}
+                    value={borrowData.quantity}
+                    onChange={(e) =>
+                      setBorrowData({
+                        ...borrowData,
+                        quantity: parseInt(e.target.value),
+                      })
+                    }
+                    className="w-full border p-2 rounded"
+                    placeholder="Quantity"
+                  />
+                  <input
+                    type="date"
+                    value={borrowData.dueDate}
+                    onChange={(e) =>
+                      setBorrowData({ ...borrowData, dueDate: e.target.value })
+                    }
+                    className="w-full border p-2 rounded"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBorrowMode(false);
+                        setSelectedBook(null);
+                      }}
+                      className="px-4 py-2 bg-gray-200 rounded"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={borrowLoading}
+                      className="px-4 py-2 bg-purple-600 text-white rounded"
+                    >
+                      {borrowLoading ? "Borrowing..." : "Confirm Borrow"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Book Details Modal */}
+          {selectedBook && !editMode && !borrowMode && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-lg max-w-md w-full p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Book Details
+                  </h3>
+                  <button
+                    onClick={() => setSelectedBook(null)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <span className="font-medium text-gray-700">Title:</span>
+                    <span className="ml-2 text-gray-900">
+                      {selectedBook.title}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Author:</span>
+                    <span className="ml-2 text-gray-900">
+                      {selectedBook.author}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Genre:</span>
+                    <span className="ml-2 text-gray-900">
+                      {selectedBook.genre}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">ISBN:</span>
+                    <span className="ml-2 text-gray-900">
+                      {selectedBook.isbn}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Copies:</span>
+                    <span className="ml-2 text-gray-900">
+                      {selectedBook.copies}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Edit Modal */}
+          {editMode && selectedBook && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-lg max-w-md w-full p-6">
+                <h3 className="text-lg font-semibold mb-4">Edit Book</h3>
+                <form onSubmit={handleUpdateSubmit} className="space-y-3">
+                  <input
+                    type="text"
+                    value={selectedBook.title}
+                    onChange={(e) =>
+                      setSelectedBook({
+                        ...selectedBook,
+                        title: e.target.value,
+                      })
+                    }
+                    className="w-full border p-2 rounded"
+                    placeholder="Title"
+                  />
+                  <input
+                    type="text"
+                    value={selectedBook.author}
+                    onChange={(e) =>
+                      setSelectedBook({
+                        ...selectedBook,
+                        author: e.target.value,
+                      })
+                    }
+                    className="w-full border p-2 rounded"
+                    placeholder="Author"
+                  />
+                  <select
+                    value={selectedBook.genre}
+                    onChange={(e) =>
+                      setSelectedBook({
+                        ...selectedBook,
+                        genre: e.target.value as IBook["genre"], // cast to Genre type
+                      })
+                    }
+                    className="w-full border p-2 rounded"
+                  >
+                    <option value="FICTION">FICTION</option>
+                    <option value="NON_FICTION">NON_FICTION</option>
+                    <option value="SCIENCE">SCIENCE</option>
+                    <option value="HISTORY">HISTORY</option>
+                    <option value="BIOGRAPHY">BIOGRAPHY</option>
+                    <option value="FANTASY">FANTASY</option>
+                  </select>
+
+                  <input
+                    type="text"
+                    value={selectedBook.isbn}
+                    onChange={(e) =>
+                      setSelectedBook({
+                        ...selectedBook,
+                        isbn: e.target.value,
+                      })
+                    }
+                    className="w-full border p-2 rounded"
+                    placeholder="ISBN"
+                  />
+                  <input
+                    type="number"
+                    value={selectedBook.copies}
+                    onChange={(e) =>
+                      setSelectedBook({
+                        ...selectedBook,
+                        copies: parseInt(e.target.value),
+                      })
+                    }
+                    className="w-full border p-2 rounded"
+                    placeholder="Copies"
+                  />
+                  <textarea
+                    value={selectedBook.description}
+                    onChange={(e) =>
+                      setSelectedBook({
+                        ...selectedBook,
+                        description: e.target.value,
+                      })
+                    }
+                    className="w-full border p-2 rounded"
+                    placeholder="Description"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditMode(false);
+                        setSelectedBook(null);
+                      }}
+                      className="px-4 py-2 bg-gray-200 rounded"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={updating}
+                      className="px-4 py-2 bg-blue-600 text-white rounded"
+                    >
+                      {updating ? "Saving..." : "Save"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
     </div>
   );
 };
