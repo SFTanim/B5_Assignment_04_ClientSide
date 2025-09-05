@@ -8,6 +8,7 @@ import {
 import { useState } from "react";
 
 const AllBooks = () => {
+  window.scrollTo(0, 0);
   const [selectedBook, setSelectedBook] = useState<IBook | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [borrowMode, setBorrowMode] = useState(false);
@@ -97,7 +98,7 @@ const AllBooks = () => {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <h1 className="text-2xl font-bold text-gray-900">
               Book Management
-            </h1> 
+            </h1>
           </div>
 
           {/* Book Stats */}
@@ -139,9 +140,11 @@ const AllBooks = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {allBooks.map((book,idx) => (
+                  {allBooks.map((book, idx) => (
                     <tr key={book._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 text-sm text-gray-900">{idx + 1}</td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {idx + 1}
+                      </td>
                       <td className="px-6 py-4">
                         <div>
                           <div className="text-sm font-medium text-gray-900">

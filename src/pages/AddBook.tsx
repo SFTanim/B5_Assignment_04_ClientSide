@@ -14,7 +14,7 @@ import type { Genre, IBook, ICreateBook } from "@/interfaces";
 import BookState from "@/components/pageComponents/BookState";
 
 const AddBook = () => {
-  // Fetch books
+  window.scrollTo(0, 0);
   const {
     data: booksData,
     isLoading: booksLoading,
@@ -166,7 +166,6 @@ const AddBook = () => {
                       {book.copies > 0 ? "Available" : "Unavailable"}
                     </span>
                   </td>
-                 
                 </tr>
               ))}
             </tbody>

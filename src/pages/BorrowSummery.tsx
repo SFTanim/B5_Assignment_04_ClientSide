@@ -2,6 +2,7 @@ import type { IBorrowSummary } from "@/interfaces";
 import { useGetBorrowQuery } from "@/redux/api/baseApi";
 
 const BorrowSummary = () => {
+  window.scrollTo(0, 0);
   const { data, isLoading, isError } = useGetBorrowQuery(undefined);
 
   if (isLoading) return <p>Loading borrow summary...</p>;
