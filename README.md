@@ -1,69 +1,78 @@
-# React + TypeScript + Vite
+# Minimal Library Management System - Frontend 📚
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend of the Minimal Library Management System built with **React**, **TypeScript**, **Redux Toolkit Query (RTK Query)**, and **Tailwind CSS**.  
+Provides a UI to manage books, perform CRUD operations, borrow books, and view a borrow summary.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Table of Contents
 
-## Expanding the ESLint configuration
+- [Features](#features)
+- [Technology Stack](#technology-stack)
+- [Project Structure](#project-structure)
+- [Routes & Pages](#routes--pages)
+- [Installation](#installation)
+- [Running the App](#running-the-app)
+- [Deployment](#deployment)
+- [Bonus Features](#bonus-features)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+---
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Features
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+- View all books in a table with details and status.
+- Add, edit, and delete books via modals.
+- Borrow books with quantity & due date validation.
+- Borrow summary page showing aggregated borrowed books.
+- Responsive and minimalist UI with Tailwind CSS.
+- Toast notifications using **React-Toastify**.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+---
+
+## Technology Stack
+
+- React + TypeScript
+- Redux Toolkit + RTK Query
+- Tailwind CSS
+- React-Toastify
+- React Router DOM
+
+---
+
+## Project Structure
+
+```
+/
+├── src/
+│ ├── components/ # Reusable components
+│ ├── pages/ # Page components (Books, AddBook, BorrowSummary)
+│ ├── redux/
+│ │ └── api/ # RTK Query API slices
+│ ├── App.tsx
+│ └── index.tsx
+├── public/
+└── package.json
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+---
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Routes & Pages
+
+| Route                | Description                           |
+|----------------------|---------------------------------------|
+| `/books`             | Displays all books with actions       |
+| `/create-book`       | Form to add a new book                |
+| `/books/:id`         | Detailed view of a single book        |
+| `/borrow/:bookId`    | Borrow a selected book                |
+| `/borrow-summary`    | Shows aggregated borrow summary       |
+
+---
+
+## Installation
+
+```bash
+git clone https://github.com/SFTanim/B5_Assignment_04_ClientSide.git
+cd B5_Assignment_04_ClientSide
+npm install
+npm run dev
